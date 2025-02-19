@@ -12,7 +12,7 @@
 
 - name: Copy DHCP Dockerfile
   ansible.builtin.template:
-    src: "Dockerfile"
+    src: "Dockerfile.j2"
     dest: "~/lab-infra/dhcp/src/Dockerfile"
     mode: '0644'
 
