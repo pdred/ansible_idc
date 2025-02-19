@@ -1,38 +1,87 @@
 # roles/dhcp/tasks/main.yml
 ---
+- name: Verify required variables
+  ansible.builtin.assert:
+    that:
+      - container_registry is defined
+      - dhcp_lease_time is defined
+      - dhcp_max_lease_time is defined
+      - network_subnet is defined
+      - network_netmask is defined
+      - clusters is defined and clusters | length > 0
+    fail_msg: "Missing required DHCP configuration variables"
+
 - name: Create DHCP directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: '0755'
+    mode: '0750'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   loop:
     - "~/lab-infra/dhcp/config"
     - "~/lab-infra/dhcp/data"
     - "~/lab-infra/dhcp/src"
 
-- name: Copy DHCP Dockerfile
-  ansible.builtin.template:
-    src: "Dockerfile.j2"
-    dest: "~/lab-infra/dhcp/src/Dockerfile"
-    mode: '0644'
-
 - name: Generate DHCP configuration
   ansible.builtin.template:
     src: "dhcpd.conf.j2"
     dest: "~/lab-infra/dhcp/config/dhcpd.conf"
-    mode: '0644'
+    mode: '0640'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    validate: '/usr/sbin/dhcpd -t -cf %s'
+  register: dhcp_config
+
+- name: Copy DHCP Dockerfile
+  ansible.builtin.template:
+    src: "Dockerfile.j2"
+    dest: "~/lab-infra/dhcp/src/Dockerfile"
+    mode: '0640'
+  register: dockerfile_copy
 
 - name: Build DHCP container
   containers.podman.podman_image:
     name: "{{ container_registry }}/dhcp-server"
     path: "~/lab-infra/dhcp/src"
-    force: true
+    force: "{{ dockerfile_copy.changed }}"
+  register: container_build
+  failed_when:
+    - container_build.failed is defined
+    - container_build.failed
 
-- name: Create DHCP systemd service
+# New task to ensure any existing container is removed before creating new one
+- name: Remove existing DHCP container if exists
+  containers.podman.podman_container:
+    name: dhcp-server
+    state: absent
+  when: dhcp_config.changed or container_build.changed
+
+# New task to create container with proper volume mounts
+- name: Create DHCP container
+  containers.podman.podman_container:
+    name: dhcp-server
+    image: "{{ container_registry }}/dhcp-server"
+    state: present
+    volumes:
+      - "~/lab-infra/dhcp/config/dhcpd.conf:/etc/dhcp/dhcpd.conf:Z"
+      - "~/lab-infra/dhcp/data:/var/lib/dhcp:Z"
+    network: host
+    privileged: true  # Required for DHCP server functionality
+  register: container_create
+
+- name: Generate systemd service file
   ansible.builtin.template:
     src: "dhcp-server.service.j2"
     dest: "{{ systemd_user_dir }}/dhcp-server.service"
     mode: '0644'
+  register: systemd_service
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  when: systemd_service.changed
 
 - name: Enable and start DHCP service
   ansible.builtin.systemd:
@@ -40,7 +89,7 @@
     state: started
     enabled: true
     scope: user
-    daemon_reload: true
+  register: dhcp_service
 
 - name: Configure firewall for DHCP
   ansible.posix.firewalld:
@@ -48,3 +97,10 @@
     permanent: true
     state: enabled
   notify: "Reload firewall"
+
+- name: Verify DHCP service is responding
+  ansible.builtin.wait_for:
+    port: 67
+    timeout: 30
+    state: started
+  register: dhcp_check
