@@ -1,0 +1,44 @@
+# roles/dhcp/templates/dhcpd.conf.j2
+default-lease-time {{ dhcp_lease_time }};
+max-lease-time {{ dhcp_max_lease_time }};
+
+# Common Options for all subnets:
+option domain-name-servers {{ dns_server_ip }};
+option ntp-servers {{ dns_server_ip }};
+authoritative;
+
+{% for cluster in clusters %}
+class "{{ cluster.name }}-hosts" {
+    match if substring (hardware, 1, 3) = {{ cluster.hosts[0].mac.split(':')[0:3] | join(':') }};
+}
+{% endfor %}
+
+subnet {{ network_subnet }} netmask {{ network_netmask }} {
+{% for cluster in clusters %}
+    # {{ cluster.name | title }} pool
+    pool {
+        allow members of "{{ cluster.name }}-hosts";
+        range {{ cluster.hosts[0].ip }} {{ cluster.hosts[-1].ip }};
+        option domain-name "{{ cluster.name }}.{{ base_domain }}";
+        option routers {{ cluster.api_ip }};
+    }
+{% endfor %}
+}
+
+{% for cluster in clusters %}
+group {
+    option domain-name "{{ cluster.name }}.{{ base_domain }}";
+{% for host in cluster.hosts %}
+    host {{ host.name }} {
+        hardware ethernet {{ host.mac }};
+        fixed-address {{ host.ip }};
+    }
+{% endfor %}
+}
+{% endfor %}
+
+# Infrastructure host
+host infra {
+    hardware ethernet 6c:fe:54:4a:ea:21;
+    fixed-address {{ dns_server_ip }};
+}

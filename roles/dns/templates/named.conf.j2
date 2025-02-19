@@ -1,0 +1,39 @@
+options {
+        listen-on port 53 { 127.0.0.1; {{ dns_server_ip }}; };
+        listen-on-v6 port 53 { none; };
+        directory       "/etc/bind";
+        dump-file       "/var/lib/bind/cache_dump.db";
+        statistics-file "/var/lib/bind/named_stats.txt";
+        memstatistics-file "/var/lib/bind/named_mem_stats.txt";
+        secroots-file   "/var/lib/bind/named.secroots";
+        recursing-file  "/var/lib/bind/named.recursing";
+        allow-query     { any; };
+        forwarders      { {% for forwarder in dns_forwarders %}{{ forwarder }}; {% endfor %}};
+        recursion yes;
+        dnssec-validation no;
+        managed-keys-directory "/var/lib/bind";
+        pid-file "/run/named/named.pid";
+        session-keyfile "/run/named/session.key";
+};
+
+logging {
+        channel default_debug {
+                file "named.run";
+                severity dynamic;
+        };
+};
+
+zone "{{ base_domain }}" IN {
+    type master;
+    file "/etc/bind/db.{{ base_domain }}";
+};
+
+zone "10.168.192.in-addr.arpa" IN {
+    type master;
+    file "/etc/bind/db.reverse";
+};
+
+zone "." IN {
+        type hint;
+        file "/etc/bind/named.ca";
+};

@@ -1,0 +1,51 @@
+---
+- name: Deploy Lab Infrastructure
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Update package cache
+      package:
+        update_cache: yes
+      changed_when: false
+      when: ansible_pkg_mgr in ['dnf', 'yum']
+
+  roles:
+    - role: common
+      tags: ['common']
+
+    - role: dns
+      tags: ['dns']
+      when: "'dns_servers' in group_names"
+
+    - role: dhcp
+      tags: ['dhcp']
+      when: "'dhcp_servers' in group_names"
+
+    - role: nfs
+      tags: ['nfs']
+      when: "'nfs_servers' in group_names"
+
+  post_tasks:
+    - name: Verify services
+      block:
+        - name: Test DNS resolution
+          command: dig @{{ dns_server_ip }} infra.lab.com
+          register: dns_test
+          changed_when: false
+          when: "'dns_servers' in group_names"
+
+        - name: Test DHCP service
+          command: nmap -sU -p 67 {{ dhcp_server_ip }}
+          register: dhcp_test
+          changed_when: false
+          when: "'dhcp_servers' in group_names"
+
+        - name: Test NFS exports
+          command: showmount -e {{ nfs_server_ip }}
+          register: nfs_test
+          changed_when: false
+          when: "'nfs_servers' in group_names"
+
+      ignore_errors: true
+      tags: ['verify']

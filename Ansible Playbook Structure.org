@@ -1,0 +1,102 @@
+#+title: Ansible Playbook Structure
+
+#+title: Ansible Playbook Structure
+
+lab_infra/
+├── ansible.cfg
+├── inventory
+│   └── hosts.yml
+├── group_vars
+│   └── all.yml
+├── roles
+│   ├── common
+│   │   ├── defaults
+│   │   │   └── main.yml
+│   │   └── tasks
+│   │       └── main.yml
+│   ├── dns
+│   │   ├── defaults
+│   │   │   └── main.yml
+│   │   ├── files
+│   │   │   └── Dockerfile
+│   │   ├── tasks
+│   │   │   └── main.yml
+│   │   └── templates
+│   │       ├── db.lab.com.j2
+│   │       ├── db.reverse.j2
+│   │       └── named.conf.j2
+│   ├── dhcp
+│   │   ├── defaults
+│   │   │   └── main.yml
+│   │   ├── files
+│   │   │   └── Dockerfile
+│   │   ├── tasks
+│   │   │   └── main.yml
+│   │   └── templates
+│   │       └── dhcpd.conf.j2
+│   ├── nfs
+│   │   ├── defaults
+│   │   │   └── main.yml
+│   │   └── tasks
+│   │       └── main.yml
+│   ├── selinux
+│   │   ├── defaults
+│   │   │   └── main.yml
+│   │   ├── files
+│   │   │   └── lab-infra.te
+│   │   ├── handlers
+│   │   │   └── main.yml
+│   │   ├── tasks
+│   │   │   └── main.yml
+│   │   └── vars
+│   │       └── main.yml
+│   └── monitoring
+│       ├── defaults
+│       │   └── main.yml
+│       ├── files
+│       │   ├── prometheus.yml
+│       │   └── grafana-dashboards
+│       │       ├── dns.json
+│       │       ├── dhcp.json
+│       │       └── nfs.json
+│       ├── tasks
+│       │   └── main.yml
+│       └── templates
+│           └── prometheus.yml.j2
+├── tests
+│   ├── conftest.py
+│   ├── test_infrastructure.py
+│   ├── test_network_config.py
+│   └── test_selinux.py
+├── scripts
+│   ├── backup.sh
+│   ├── network_config.py
+│   ├── restore.sh
+│   ├── update_network.sh
+│   └── verify_setup.sh
+├── docs
+│   ├── DEPENDENCIES.md
+│   ├── NETWORKING.md
+│   ├── SECURITY.md
+│   ├── TROUBLESHOOTING.md
+│   ├── UPGRADE.md
+│   └── CONTRIBUTING.md
+├── config
+│   └── logging.conf
+├── ansible
+│   └── requirements.yml
+├── site.yml
+├── uninstall.yml
+├── requirements.txt
+├── pytest.ini
+├── pyproject.toml
+├── .dir-locals.el
+├── .editorconfig
+├── .projectile
+├── .github
+│   └── workflows
+│       ├── ansible-lint.yml
+│       ├── validate-configs.yml
+│       ├── validate-docs.yml
+│       └── test-infrastructure.yml
+└── README.org

@@ -1,0 +1,6 @@
+
+# roles/common/handlers/main.yml
+---
+- name: reload firewall
+  command: firewall-cmd --reload
+  changed_when: true

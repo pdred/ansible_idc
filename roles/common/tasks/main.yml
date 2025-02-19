@@ -1,0 +1,41 @@
+# roles/common/tasks/main.yml
+---
+- name: Install required packages
+  package:
+    name: "{{ common_packages[ansible_os_family] }}"
+    state: present
+
+- name: Create systemd user directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ systemd_user_dir }}"
+    - "{{ ansible_user_home }}/.config/containers/systemd"
+    - "{{ ansible_user_home }}/lab-infra"
+    - "{{ ansible_user_home }}/lab-infra/dns"
+    - "{{ ansible_user_home }}/lab-infra/dhcp"
+    - "{{ ansible_user_home }}/lab-infra/nfs"
+
+- name: Enable linger for user systemd services
+  command: loginctl enable-linger {{ ansible_user_id }}
+  changed_when: false
+  failed_when: false
+
+- name: Ensure firewalld is running
+  systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Create base lab-infra directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "~/lab-infra"
+    - "~/lab-infra/dns"
+    - "~/lab-infra/dhcp"
+    - "~/lab-infra/nfs"

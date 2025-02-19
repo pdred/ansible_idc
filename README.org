@@ -1,0 +1,457 @@
+#+TITLE: Lab Infrastructure Deployment
+#+AUTHOR: Preston Davis
+#+EMAIL: ppdavis@pebcac.org
+#+DATE: 2024-02-18
+#+PROPERTY: header-args :eval never-export
+#+OPTIONS: num:nil toc:t
+#+STARTUP: showall
+
+* Table of Content :toc:
+- [[#lab-infrastructure-deployment][Lab Infrastructure Deployment]]
+  - [[#architecture-overview][Architecture Overview]]
+  - [[#prerequisites][Prerequisites]]
+  - [[#installation][Installation]]
+  - [[#role-documentation][Role Documentation]]
+  - [[#common-use-cases][Common Use Cases]]
+  - [[#contributing][Contributing]]
+  - [[#development-notes][Development Notes]]
+  - [[#local-variables][Local Variables]]
+
+* Lab Infrastructure Deployment
+:PROPERTIES:
+:CUSTOM_ID: introduction
+:END:
+
+[[https://github.com/pebcac/lab_infra/actions/workflows/ansible-lint.yml/badge.svg]]
+[[https://github.com/pebcac/lab_infra/actions/workflows/validate-configs.yml/badge.svg]]
+[[https://github.com/pebcac/lab_infra/actions/workflows/validate-docs.yml/badge.svg]]
+
+This repository contains Ansible playbooks and roles for deploying core infrastructure
+services (DNS, DHCP, and NFS) for a lab environment supporting multiple OpenShift
+clusters.
+
+** Architecture Overview
+:PROPERTIES:
+:CUSTOM_ID: architecture
+:END:
+
+The infrastructure deployment consists of three main services:
+
+*** DNS Server (BIND)
+- Handles name resolution for the lab environment
+- Configured for multiple OpenShift clusters
+- Containerized using Podman
+- Managed via systemd user services
+
+*** DHCP Server (ISC DHCP)
+- Manages IP address allocation
+- Supports multiple subnet pools for different clusters
+- Containerized using Podman
+- Managed via systemd user services
+
+*** NFS Server
+- Provides shared storage for the lab environment
+- Native systemd service
+- Exports configured for various use cases
+
+** Prerequisites
+:PROPERTIES:
+:CUSTOM_ID: prerequisites
+:END:
+
+*** System Requirements
+#+begin_src org
+- RHEL/CentOS/Fedora-based system
+- Podman installed
+- Systemd
+- SELinux (optional but supported)
+- Firewalld
+- User with sudo privileges
+- ZSH shell with oh-my-zsh
+#+end_src
+
+*** Network Requirements
+#+begin_src org
+- Available IP range: 192.168.10.0/24
+- DNS server IP: 192.168.10.2
+- Required ports:
+  - DNS: 53 (TCP/UDP)
+  - DHCP: 67/68 (UDP)
+  - NFS: 2049 (TCP), 111 (TCP/UDP)
+#+end_src
+
+** Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+
+*** Clone the Repository
+#+begin_src bash
+git clone https://github.com/pebcac/lab-infra.git
+cd lab-infra
+#+end_src
+
+*** Configure the Environment
+Review and modify the following files if needed:
+#+begin_src org
+- group_vars/all.yml           # Global variables
+- inventory/hosts.yml          # Inventory configuration
+- roles/*/defaults/main.yml    # Role-specific variables
+#+end_src
+
+*** Run the Deployment
+#+begin_src bash
+# Run complete deployment
+ansible-playbook site.yml
+
+# Run specific roles
+ansible-playbook site.yml --tags dns,dhcp
+
+# Run with different inventory
+ansible-playbook -i custom-inventory.yml site.yml
+#+end_src
+
+** Role Documentation
+:PROPERTIES:
+:CUSTOM_ID: roles
+:END:
+
+*** Common Role
+:PROPERTIES:
+:CUSTOM_ID: common-role
+:END:
+
+The common role handles base system configuration:
+
+#+begin_src yaml
+# roles/common/tasks/main.yml
+- name: Install required packages
+  package:
+    name: "{{ common_packages[ansible_os_family] }}"
+    state: present
+#+end_src
+
+**** Variables
+#+begin_src org
+- common_packages: Dictionary of required packages per OS family
+- systemd_user_dir: Path to user's systemd directory
+#+end_src
+
+*** DNS Role
+:PROPERTIES:
+:CUSTOM_ID: dns-role
+:END:
+
+Configures BIND DNS server:
+
+#+begin_src yaml
+# roles/dns/templates/named.conf.j2
+options {
+        listen-on port 53 { 127.0.0.1; {{ dns_server_ip }}; };
+        directory       "/etc/bind";
+        allow-query     { any; };
+        forwarders      { {{ dns_forwarders | join('; ') }}; };
+}
+#+end_src
+
+**** Variables
+#+begin_src org
+- dns_server_ip: IP address for DNS server
+- dns_forwarders: List of upstream DNS servers
+- base_domain: Base domain for the lab environment
+#+end_src
+
+*** DHCP Role
+:PROPERTIES:
+:CUSTOM_ID: dhcp-role
+:END:
+
+Configures ISC DHCP server:
+
+#+begin_src yaml
+# roles/dhcp/templates/dhcpd.conf.j2
+subnet {{ network_subnet }} netmask {{ network_netmask }} {
+    pool {
+        range {{ dhcp_range_start }} {{ dhcp_range_end }};
+    }
+}
+#+end_src
+
+**** Variables
+#+begin_src org
+- network_subnet: Network subnet for DHCP
+- network_netmask: Network netmask
+- dhcp_lease_time: Default lease time
+#+end_src
+
+*** NFS Role
+:PROPERTIES:
+:CUSTOM_ID: nfs-role
+:END:
+
+Configures NFS server:
+
+#+begin_src yaml
+# roles/nfs/templates/exports.j2
+{% for export in nfs_exports %}
+{{ export.path }}    {{ export.options }}
+{% endfor %}
+#+end_src
+
+**** Variables
+#+begin_src org
+- nfs_exports: List of export configurations
+- nfs_server_ip: IP address for NFS server
+#+end_src
+
+** Common Use Cases
+:PROPERTIES:
+:CUSTOM_ID: use-cases
+:END:
+
+*** OpenShift Cluster Integration
+**** Setting Up DNS for New Cluster
+#+begin_src yaml
+# roles/dns/vars/main.yml
+cluster_configs:
+  - name: production
+    base_domain: prod.lab.com
+    api_ip: 192.168.10.50
+    ingress_ip: 192.168.10.51
+  - name: development
+    base_domain: dev.lab.com
+    api_ip: 192.168.10.60
+    ingress_ip: 192.168.10.61
+#+end_src
+
+Apply configuration:
+#+begin_src bash
+ansible-playbook site.yml --tags dns -e cluster_name=production
+#+end_src
+
+**** Configuring DHCP for Cluster Nodes
+#+begin_src yaml
+# roles/dhcp/vars/main.yml
+cluster_subnets:
+  production:
+    range_start: 192.168.10.50
+    range_end: 192.168.10.59
+    domain: prod.lab.com
+  development:
+    range_start: 192.168.10.60
+    range_end: 192.168.10.69
+    domain: dev.lab.com
+#+end_src
+
+Apply configuration:
+#+begin_src bash
+ansible-playbook site.yml --tags dhcp -e cluster_name=production
+#+end_src
+
+*** Network Configuration Updates
+**** Change Network Range
+#+begin_src bash
+# Update network range for all services
+./scripts/network_config.py --new-network 192.168.20
+
+# Verify changes
+dig @192.168.20.2 api.prod.lab.com
+nmap -sU -p 67 192.168.20.2
+showmount -e 192.168.20.2
+#+end_src
+
+**** Add New Subnet
+#+begin_src yaml
+# roles/dhcp/templates/dhcpd.conf.j2
+subnet {{ network_subnet }} netmask {{ network_netmask }} {
+    pool {
+        range {{ dhcp_range_start }} {{ dhcp_range_end }};
+        allow members of "testing-cluster";
+    }
+}
+
+class "testing-cluster" {
+    match if substring(hardware, 1, 3) = 10:70:fd;
+}
+#+end_src
+
+*** Security Hardening
+**** Enable DNSSEC
+#+begin_src bash
+# Generate DNSSEC keys
+cd /etc/bind
+dnssec-keygen -a NSEC3RSASHA1 -b 2048 -n ZONE lab.com
+dnssec-keygen -f KSK -a NSEC3RSASHA1 -b 4096 -n ZONE lab.com
+
+# Add DNSSEC configuration
+cat >> named.conf << EOF
+dnssec-enable yes;
+dnssec-validation yes;
+dnssec-lookaside auto;
+EOF
+
+# Sign the zone
+dnssec-signzone -A -3 $(head -c 1000 /dev/random | sha1sum | cut -b 1-16) \
+    -N INCREMENT -o lab.com -t db.lab.com
+#+end_src
+
+**** Configure Kerberos for NFS
+#+begin_src bash
+# Install Kerberos
+sudo dnf install krb5-server krb5-workstation
+
+# Configure Kerberos realm
+sudo cat > /etc/krb5.conf << EOF
+[libdefaults]
+ default_realm = LAB.COM
+
+[realms]
+ LAB.COM = {
+  kdc = 192.168.10.2
+  admin_server = 192.168.10.2
+ }
+EOF
+
+# Update NFS exports with Kerberos
+sudo cat > /etc/exports << EOF
+/exports/data *(sec=krb5p,rw,sync)
+EOF
+#+end_src
+
+*** Monitoring Integration
+**** Prometheus Integration
+#+begin_src yaml
+# roles/monitoring/templates/prometheus.yml.j2
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'dns'
+    static_configs:
+      - targets: ['{{ dns_server_ip }}:9119']
+
+  - job_name: 'dhcp'
+    static_configs:
+      - targets: ['{{ dhcp_server_ip }}:9119']
+
+  - job_name: 'nfs'
+    static_configs:
+      - targets: ['{{ nfs_server_ip }}:9119']
+#+end_src
+
+**** Grafana Dashboard
+#+begin_src json
+{
+  "dashboard": {
+    "title": "Lab Infrastructure",
+    "panels": [
+      {
+        "title": "DNS Queries/sec",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bind_queries_total[5m])"
+          }
+        ]
+      },
+      {
+        "title": "DHCP Leases",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "dhcp_leases_current_count"
+          }
+        ]
+      }
+    ]
+  }
+}
+#+end_src
+
+*** Backup and Recovery
+**** Automated Backup
+#+begin_src bash
+#!/bin/bash
+# scripts/backup.sh
+
+BACKUP_DIR=~/lab-infra/backups/$(date +%Y%m%d)
+mkdir -p $BACKUP_DIR/{dns,dhcp,nfs}
+
+# Backup DNS
+podman exec dns-server rndc freeze lab.com
+cp -r ~/lab-infra/dns/config/* $BACKUP_DIR/dns/
+podman exec dns-server rndc thaw lab.com
+
+# Backup DHCP
+cp -r ~/lab-infra/dhcp/config/* $BACKUP_DIR/dhcp/
+cp /var/lib/dhcp/dhcpd.leases $BACKUP_DIR/dhcp/
+
+# Backup NFS
+cp /etc/exports $BACKUP_DIR/nfs/
+#+end_src
+
+**** Disaster Recovery
+#+begin_src bash
+#!/bin/bash
+# scripts/restore.sh
+
+BACKUP_DATE=$1
+BACKUP_DIR=~/lab-infra/backups/$BACKUP_DATE
+
+# Stop services
+systemctl --user stop dns-server.service dhcp-server.service
+sudo systemctl stop nfs-server
+
+# Restore configurations
+cp -r $BACKUP_DIR/dns/* ~/lab-infra/dns/config/
+cp -r $BACKUP_DIR/dhcp/* ~/lab-infra/dhcp/config/
+sudo cp $BACKUP_DIR/nfs/exports /etc/exports
+
+# Start services
+systemctl --user start dns-server.service dhcp-server.service
+sudo systemctl start nfs-server
+
+# Verify services
+./run_tests.sh
+#+end_src
+
+** Contributing
+:PROPERTIES:
+:CUSTOM_ID: contributing
+:END:
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+** Development Notes
+:PROPERTIES:
+:CUSTOM_ID: development
+:END:
+
+*** Coding Standards
+#+begin_src org
+- Follow Ansible best practices
+- Use YAML files with .yml extension
+- Include comments for complex tasks
+- Use Jinja2 templating consistently
+- Follow variable naming conventions
+#+end_src
+
+*** Testing
+#+begin_src org
+- Run ansible-lint before committing
+- Test configurations using validate-configs.yml
+- Verify documentation with validate-docs.yml
+- Test on both RHEL and Fedora systems
+#+end_src
+
+
+** Local Variables :ARCHIVE:
+# Local Variables:
+# org-hide-emphasis-markers: t
+# org-hide-leading-stars: t
+# org-startup-folded: overview
+# End:

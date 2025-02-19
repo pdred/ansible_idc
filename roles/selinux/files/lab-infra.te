@@ -1,0 +1,32 @@
+# roles/selinux/files/lab-infra.te
+module lab-infra 1.0;
+
+require {
+    type dhcpd_t;
+    type named_t;
+    type nfsd_t;
+    type container_t;
+    type container_file_t;
+    type unconfined_t;
+    class file { read write getattr open };
+    class dir { search };
+    class tcp_socket { name_connect };
+    class udp_socket { name_bind };
+}
+
+#============= DHCP Server ==============
+allow dhcpd_t container_file_t:file { read getattr open };
+allow dhcpd_t container_file_t:dir search;
+allow dhcpd_t self:udp_socket name_bind;
+
+#============= DNS Server ==============
+allow named_t container_file_t:file { read write getattr open };
+allow named_t container_file_t:dir search;
+allow named_t self:tcp_socket name_connect;
+
+#============= NFS Server ==============
+allow nfsd_t container_file_t:file { read write getattr open };
+allow nfsd_t container_file_t:dir search;
+
+#============= Container Access ==============
+allow container_t unconfined_t:tcp_socket name_connect;

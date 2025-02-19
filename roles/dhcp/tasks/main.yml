@@ -1,0 +1,50 @@
+# roles/dhcp/tasks/main.yml
+---
+- name: Create DHCP directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "~/lab-infra/dhcp/config"
+    - "~/lab-infra/dhcp/data"
+    - "~/lab-infra/dhcp/src"
+
+- name: Copy DHCP Dockerfile
+  template:
+    src: "Dockerfile"
+    dest: "~/lab-infra/dhcp/src/Dockerfile"
+    mode: '0644'
+
+- name: Generate DHCP configuration
+  template:
+    src: "dhcpd.conf.j2"
+    dest: "~/lab-infra/dhcp/config/dhcpd.conf"
+    mode: '0644'
+
+- name: Build DHCP container
+  containers.podman.podman_image:
+    name: "{{ container_registry }}/dhcp-server"
+    path: "~/lab-infra/dhcp/src"
+    force: yes
+
+- name: Create DHCP systemd service
+  template:
+    src: "dhcp-server.service.j2"
+    dest: "{{ systemd_user_dir }}/dhcp-server.service"
+    mode: '0644'
+
+- name: Enable and start DHCP service
+  systemd:
+    name: dhcp-server
+    state: started
+    enabled: yes
+    scope: user
+    daemon_reload: yes
+
+- name: Configure firewall for DHCP
+  firewalld:
+    service: dhcp
+    permanent: yes
+    state: enabled
+  notify: reload firewall

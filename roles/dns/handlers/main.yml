@@ -1,0 +1,18 @@
+---
+# roles/dns/handlers/main.yml
+
+- name: reload firewall
+  command: firewall-cmd --reload
+  become: true
+  changed_when: true
+
+- name: restart dns service
+  systemd:
+    name: dns-server
+    state: restarted
+    scope: user
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+    scope: user

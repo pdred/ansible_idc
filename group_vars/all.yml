@@ -1,0 +1,86 @@
+---
+# Network Configuration
+network_subnet: "192.168.10.0"
+network_netmask: "255.255.255.0"
+dns_server_ip: "192.168.10.2"
+dhcp_server_ip: "192.168.10.2"
+nfs_server_ip: "192.168.10.2"
+
+# Domain Configuration
+base_domain: "lab.com"
+clusters:
+  - name: "partner"
+    api_ip: "192.168.10.10"
+    hosts:
+      - name: "idclab695"
+        ip: "192.168.10.10"
+        mac: "10:70:fd:26:4d:1b"
+  - name: "engg"
+    api_ip: "192.168.10.104"
+    hosts:
+      - name: "idclab479"
+        ip: "192.168.10.104"
+        mac: "10:70:fd:26:4b:ea"
+  - name: "clust"
+    api_ip: "192.168.10.165"
+    hosts:
+      - name: "idclab647"
+        ip: "192.168.10.165"
+        mac: "10:70:fd:26:4f:d2"
+      - name: "idclab648"
+        ip: "192.168.10.166"
+        mac: "10:70:fd:26:50:52"
+  - name: "kvm"
+    api_ip: "192.168.10.177"
+    hosts:
+      - name: "idclab649"
+        ip: "192.168.10.177"
+        mac: "10:70:fd:26:4e:12"
+      - name: "idclab484"
+        ip: "192.168.10.178"
+        mac: "6c:fe:54:4a:e9:81"
+  - name: "cicd"
+    api_ip: "192.168.10.198"
+    hosts:
+      - name: "idclab650"
+        ip: "192.168.10.198"
+        mac: "10:70:fd:26:49:72"
+
+# Container Configuration
+container_engine: "podman"
+container_registry: "local"
+systemd_user_dir: "~/.config/systemd/user"
+
+# DNS Configuration
+dns_forwarders:
+  - "1.1.1.1"
+  - "1.0.0.1"
+
+# DHCP Configuration
+dhcp_lease_time: 600
+dhcp_max_lease_time: 7200
+
+# NFS Configuration
+nfs_exports:
+  - path: "/exports/home"
+    options: "*(rw,sync,no_root_squash)"
+  - path: "/exports/data"
+    options: "*(rw,sync,no_root_squash)"
+  - path: "/exports/apps"
+    options: "*(rw,sync,no_root_squash)"
+
+# Required packages
+common_packages:
+  RedHat:
+    - bind-utils
+    - bind
+    - dhcp-server
+    - nfs-utils
+    - podman-systemd
+    - firewalld
+  Debian:
+    - bind9
+    - bind9utils
+    - isc-dhcp-server
+    - nfs-kernel-server
+    - podman

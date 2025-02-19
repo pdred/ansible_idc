@@ -1,0 +1,11 @@
+# roles/selinux/vars/main.yml
+---
+selinux_ports:
+  - { port: 53, proto: tcp }
+  - { port: 53, proto: udp }
+  - { port: 67, proto: udp }
+  - { port: 68, proto: udp }
+  - { port: 2049, proto: tcp }
+  - { port: 111, proto: tcp }
+  - { port: 111, proto: udp }
+  - { port: 20048, proto: tcp }

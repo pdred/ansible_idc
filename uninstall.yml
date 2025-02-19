@@ -1,0 +1,85 @@
+# uninstall.yml
+---
+- name: Uninstall Lab Infrastructure
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Stop and disable systemd services
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+        scope: user
+      loop:
+        - dns-server
+        - dhcp-server
+      when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
+      ignore_errors: yes
+
+    - name: Stop and disable NFS server
+      systemd:
+        name: nfs-server
+        state: stopped
+        enabled: no
+      when: "'nfs_servers' in group_names"
+      ignore_errors: yes
+
+    - name: Remove containers
+      containers.podman.podman_container:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - dns-server
+        - dhcp-server
+      when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
+      ignore_errors: yes
+
+    - name: Remove container images
+      containers.podman.podman_image:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ container_registry }}/dns-server"
+        - "{{ container_registry }}/dhcp-server"
+      when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
+      ignore_errors: yes
+
+    - name: Remove systemd service files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ systemd_user_dir }}/dns-server.service"
+        - "{{ systemd_user_dir }}/dhcp-server.service"
+      when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
+
+    - name: Remove NFS exports
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ nfs_exports }}"
+      when: "'nfs_servers' in group_names"
+
+    - name: Remove lab-infra directory
+      file:
+        path: "~/lab-infra"
+        state: absent
+
+    - name: Remove firewall rules
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: disabled
+      loop:
+        - dns
+        - dhcp
+        - nfs
+        - rpc-bind
+        - mountd
+      notify: reload firewall
+
+  handlers:
+    - name: reload firewall
+      command: firewall-cmd --reload
+      changed_when: true

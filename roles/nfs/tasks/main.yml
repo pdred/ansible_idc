@@ -1,0 +1,34 @@
+# roles/nfs/tasks/main.yml
+---
+- name: Create NFS export directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+    owner: "nobody"
+    group: "nobody"
+  loop: "{{ nfs_exports }}"
+
+- name: Configure NFS exports
+  template:
+    src: "exports.j2"
+    dest: "/etc/exports"
+    mode: '0644'
+  notify: restart nfs
+
+- name: Enable and start NFS server
+  systemd:
+    name: nfs-server
+    state: started
+    enabled: yes
+
+- name: Configure firewall for NFS
+  firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+  loop:
+    - nfs
+    - rpc-bind
+    - mountd
+  notify: reload firewall

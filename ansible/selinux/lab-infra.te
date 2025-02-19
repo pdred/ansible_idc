@@ -1,0 +1,24 @@
+policy_module(lab_infra, 1.0)
+
+require {
+    type dhcpd_t;
+    type named_t;
+    type nfsd_t;
+    type container_t;
+    type container_file_t;
+    class file { read write getattr };
+    class dir { search };
+    class tcp_socket { name_connect };
+}
+
+#============= DHCP Server ==============
+allow dhcpd_t container_file_t:file { read getattr };
+allow dhcpd_t container_file_t:dir search;
+
+#============= DNS Server ==============
+allow named_t container_file_t:file { read write getattr };
+allow named_t container_file_t:dir search;
+
+#============= NFS Server ==============
+allow nfsd_t container_file_t:file { read write getattr };
+allow nfsd_t container_file_t:dir search;

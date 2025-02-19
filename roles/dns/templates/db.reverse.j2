@@ -1,0 +1,20 @@
+$TTL    604800
+@       IN      SOA     infra.{{ base_domain }}. admin.{{ base_domain }}. (
+                     {{ '%Y%m%d01' | strftime }}  ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+@       IN      NS      infra.{{ base_domain }}.
+@       IN      A       {{ dns_server_ip }}
+
+; Infrastructure
+{{ dns_server_ip.split('.')[-1] }}     IN      PTR     infra.{{ base_domain }}.
+
+{% for cluster in clusters %}
+; {{ cluster.name | title }} hosts
+{% for host in cluster.hosts %}
+{{ host.ip.split('.')[-1] }}     IN      PTR     {{ host.name }}.{{ cluster.name }}.{{ base_domain }}.
+{% endfor %}
+{% endfor %}

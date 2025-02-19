@@ -1,0 +1,4 @@
+# roles/nfs/templates/exports.j2
+{% for export in nfs_exports %}
+{{ export.path }}    {{ export.options }}
+{% endfor %}

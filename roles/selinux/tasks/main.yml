@@ -1,0 +1,29 @@
+# roles/selinux/tasks/main.yml
+---
+- name: Ensure SELinux packages are installed
+  ansible.builtin.package:
+    name:
+      - policycoreutils
+      - policycoreutils-python-utils
+      - selinux-policy-devel
+    state: present
+
+- name: Copy SELinux policy module
+  ansible.builtin.copy:
+    src: lab-infra.te
+    dest: "/tmp/lab-infra.te"
+    mode: '0644'
+
+- name: Check if SELinux module exists
+  ansible.builtin.stat:
+    path: "/etc/selinux/targeted/active/modules/400/lab-infra"
+  register: semodule_stat
+
+- name: Compile and install SELinux policy module
+  ansible.builtin.shell: |
+    cd /tmp
+    checkmodule -M -m -o lab-infra.mod lab-infra.te
+    semodule_package -o lab-infra.pp -m lab-infra.mod
+    semodule -i lab-infra.pp
+  when: not semodule_stat.stat.exists
+  notify: restart_services
