@@ -63,11 +63,11 @@ dhcp_max_lease_time: 7200
 
 # NFS Configuration
 nfs_exports:
-  - path: "/exports/home"
+  - path: "~/nfsshare/engg"
     options: "*(rw,sync,no_root_squash)"
-  - path: "/exports/data"
+  - path: "~/nfsshare/partner"
     options: "*(rw,sync,no_root_squash)"
-  - path: "/exports/apps"
+  - path: "~/nfsshare/kvm"
     options: "*(rw,sync,no_root_squash)"
 
 # Required packages
