@@ -2,5 +2,5 @@
 pytest==7.4.0
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-dnspython==2.4.2
+dnspython==2.6.1
 asyncio==3.4.3
