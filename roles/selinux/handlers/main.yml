@@ -1,6 +1,6 @@
 # roles/selinux/handlers/main.yml
 ---
-- name: restart_services
+- name: Restart infrastructure services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: restarted

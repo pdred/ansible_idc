@@ -1,3 +1,4 @@
+# site.yml
 ---
 - name: Deploy Lab Infrastructure
   hosts: all
@@ -5,8 +6,8 @@
 
   pre_tasks:
     - name: Update package cache
-      package:
-        update_cache: yes
+      ansible.builtin.package:
+        update_cache: true
       changed_when: false
       when: ansible_pkg_mgr in ['dnf', 'yum']
 
@@ -28,24 +29,31 @@
 
   post_tasks:
     - name: Verify services
+      tags: ['verify']
       block:
         - name: Test DNS resolution
-          command: dig @{{ dns_server_ip }} infra.lab.com
+          ansible.builtin.command: dig @{{ dns_server_ip }} infra.lab.com
           register: dns_test
           changed_when: false
+          failed_when:
+            - dns_test.rc != 0
+            - "'Connection refused' not in dns_test.stderr"
           when: "'dns_servers' in group_names"
 
         - name: Test DHCP service
-          command: nmap -sU -p 67 {{ dhcp_server_ip }}
+          ansible.builtin.command: nmap -sU -p 67 {{ dhcp_server_ip }}
           register: dhcp_test
           changed_when: false
+          failed_when:
+            - dhcp_test.rc != 0
+            - "'Connection refused' not in dhcp_test.stderr"
           when: "'dhcp_servers' in group_names"
 
         - name: Test NFS exports
-          command: showmount -e {{ nfs_server_ip }}
+          ansible.builtin.command: showmount -e {{ nfs_server_ip }}
           register: nfs_test
           changed_when: false
+          failed_when:
+            - nfs_test.rc != 0
+            - "'Connection refused' not in nfs_test.stderr"
           when: "'nfs_servers' in group_names"
-
-      ignore_errors: true
-      tags: ['verify']
