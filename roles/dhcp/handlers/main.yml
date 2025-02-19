@@ -1,0 +1,14 @@
+---
+- name: Restart DHCP service
+  ansible.builtin.systemd:
+    name: dhcp-server
+    state: restarted
+    scope: user
+  listen: "restart dhcp"
+
+- name: Reload DHCP configuration
+  ansible.builtin.systemd:
+    name: dhcp-server
+    state: reloaded
+    scope: user
+  listen: "reload dhcp"
