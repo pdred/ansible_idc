@@ -22,7 +22,7 @@
 :CUSTOM_ID: introduction
 :END:
 
-https://github.com/pdred/ansible_idc/actions/workflows/ansible-lint.yml/badge.svg
+[[https://github.com/pdred/ansible_idc/actions/workflows/validate-docs.yml/badge.svg][https://github.com/pdred/ansible_idc/actions/workflows/validate-docs.yml]]
 
 This repository contains Ansible playbooks and roles for deploying core infrastructure
 services (DNS, DHCP, and NFS) for a lab environment supporting multiple OpenShift
