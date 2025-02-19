@@ -26,4 +26,5 @@
     semodule_package -o lab-infra.pp -m lab-infra.mod
     semodule -i lab-infra.pp
   when: not semodule_stat.stat.exists
-  notify: restart_services
+  changed_when: not semodule_stat.stat.exists
+  notify: Restart infrastructure services
