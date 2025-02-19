@@ -50,6 +50,7 @@ clusters:
 container_engine: "podman"
 container_registry: "local"
 systemd_user_dir: "~/.config/systemd/user"
+ansible_user_home: "~"
 
 # DNS Configuration
 dns_forwarders:
