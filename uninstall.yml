@@ -6,24 +6,32 @@
 
   tasks:
     - name: Stop and disable systemd services
-      systemd:
+      ansible.builtin.systemd:
         name: "{{ item }}"
         state: stopped
-        enabled: no
+        enabled: false
         scope: user
       loop:
         - dns-server
         - dhcp-server
       when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
-      ignore_errors: yes
+      register: service_stop
+      failed_when:
+        - service_stop.failed is defined
+        - service_stop.failed
+        - '"Could not find the requested service" not in service_stop.msg'
 
     - name: Stop and disable NFS server
-      systemd:
+      ansible.builtin.systemd:
         name: nfs-server
         state: stopped
-        enabled: no
+        enabled: false
       when: "'nfs_servers' in group_names"
-      ignore_errors: yes
+      register: nfs_stop
+      failed_when:
+        - nfs_stop.failed is defined
+        - nfs_stop.failed
+        - '"Could not find the requested service" not in nfs_stop.msg'
 
     - name: Remove containers
       containers.podman.podman_container:
@@ -33,7 +41,11 @@
         - dns-server
         - dhcp-server
       when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
-      ignore_errors: yes
+      register: container_remove
+      failed_when:
+        - container_remove.failed is defined
+        - container_remove.failed
+        - '"not found" not in container_remove.msg'
 
     - name: Remove container images
       containers.podman.podman_image:
@@ -43,10 +55,14 @@
         - "{{ container_registry }}/dns-server"
         - "{{ container_registry }}/dhcp-server"
       when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
-      ignore_errors: yes
+      register: image_remove
+      failed_when:
+        - image_remove.failed is defined
+        - image_remove.failed
+        - '"not found" not in image_remove.msg'
 
     - name: Remove systemd service files
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: absent
       loop:
@@ -55,21 +71,21 @@
       when: "'dns_servers' in group_names or 'dhcp_servers' in group_names"
 
     - name: Remove NFS exports
-      file:
+      ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
       loop: "{{ nfs_exports }}"
       when: "'nfs_servers' in group_names"
 
     - name: Remove lab-infra directory
-      file:
+      ansible.builtin.file:
         path: "~/lab-infra"
         state: absent
 
     - name: Remove firewall rules
-      firewalld:
+      ansible.posix.firewalld:
         service: "{{ item }}"
-        permanent: yes
+        permanent: true
         state: disabled
       loop:
         - dns
@@ -77,9 +93,9 @@
         - nfs
         - rpc-bind
         - mountd
-      notify: reload firewall
+      notify: "Reload firewall"
 
   handlers:
-    - name: reload firewall
-      command: firewall-cmd --reload
+    - name: Reload firewall
+      ansible.builtin.command: firewall-cmd --reload
       changed_when: true

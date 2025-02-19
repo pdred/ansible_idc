@@ -1,10 +1,10 @@
 # roles/nfs/handlers/main.yml
 ---
-- name: restart nfs
-  systemd:
+- name: Restart NFS service
+  ansible.builtin.systemd:
     name: nfs-server
     state: restarted
 
-- name: reload firewall
-  command: firewall-cmd --reload
+- name: Reload firewall
+  ansible.builtin.command: firewall-cmd --reload
   changed_when: true

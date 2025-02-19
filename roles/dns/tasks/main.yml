@@ -1,8 +1,7 @@
----
 # roles/dns/tasks/main.yml
-
+---
 - name: Create DNS directories
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
@@ -12,7 +11,7 @@
     - "~/lab-infra/dns/src"
 
 - name: Create DNS validation directories
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
@@ -24,7 +23,7 @@
     - "/var/named/dynamic"
 
 - name: Set DNS directory permissions
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     owner: "{{ ansible_user_id }}"
@@ -36,13 +35,13 @@
     - "/var/lib/bind"
 
 - name: Copy DNS Dockerfile
-  template:
+  ansible.builtin.template:
     src: "Dockerfile.j2"
     dest: "~/lab-infra/dns/src/Dockerfile"
     mode: '0644'
 
 - name: Generate DNS configuration
-  template:
+  ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "~/lab-infra/dns/config/{{ item.dest }}"
     mode: '0644'
@@ -52,17 +51,17 @@
     - { src: 'db.reverse.j2', dest: 'db.10.168.192' }
 
 - name: Validate DNS configuration
-  command: "named-checkconf ~/lab-infra/dns/config/named.conf"
+  ansible.builtin.command: "named-checkconf ~/lab-infra/dns/config/named.conf"
   changed_when: false
   register: named_conf_check
 
 - name: Validate forward zone
-  command: "named-checkzone {{ base_domain }} ~/lab-infra/dns/config/db.lab.com"
+  ansible.builtin.command: "named-checkzone {{ base_domain }} ~/lab-infra/dns/config/db.lab.com"
   changed_when: false
   register: forward_zone_check
 
 - name: Validate reverse zone
-  command: "named-checkzone 10.168.192.in-addr.arpa ~/lab-infra/dns/config/db.10.168.192"
+  ansible.builtin.command: "named-checkzone 10.168.192.in-addr.arpa ~/lab-infra/dns/config/db.10.168.192"
   changed_when: false
   register: reverse_zone_check
 
@@ -70,57 +69,61 @@
   containers.podman.podman_image:
     name: "{{ container_registry }}/dns-server"
     path: "~/lab-infra/dns/src"
-    force: yes
+    force: true
   register: dns_image_build
 
 - name: Stop existing DNS container
   containers.podman.podman_container:
     name: dns-server
     state: absent
-  ignore_errors: true
+  register: container_stop
+  failed_when:
+    - container_stop.failed is defined
+    - container_stop.failed
+    - '"not found" not in container_stop.msg'
 
 - name: Create DNS systemd service directory
-  file:
+  ansible.builtin.file:
     path: "{{ systemd_user_dir }}"
     state: directory
     mode: '0755'
 
 - name: Template DNS systemd service
-  template:
+  ansible.builtin.template:
     src: "dns-server.service.j2"
     dest: "{{ systemd_user_dir }}/dns-server.service"
     mode: '0644'
   register: dns_service_file
 
 - name: Reload systemd daemon
-  systemd:
-    daemon_reload: yes
+  ansible.builtin.systemd:
+    daemon_reload: true
     scope: user
   when: dns_service_file.changed
 
 - name: Enable and start DNS service
-  systemd:
+  ansible.builtin.systemd:
     name: dns-server
     state: started
-    enabled: yes
+    enabled: true
     scope: user
 
 - name: Configure firewall for DNS
-  firewalld:
+  ansible.posix.firewalld:
     service: dns
-    permanent: yes
+    permanent: true
     state: enabled
   become: true
-  notify: reload firewall
+  notify: "Reload firewall"
 
 - name: Wait for DNS service to be ready
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ dns_server_ip }}"
     port: 53
     timeout: 30
 
 - name: Verify DNS resolution
-  command: "dig @{{ dns_server_ip }} infra.{{ base_domain }}"
+  ansible.builtin.command: "dig @{{ dns_server_ip }} infra.{{ base_domain }}"
   changed_when: false
   register: dns_test
   until: dns_test.rc == 0
