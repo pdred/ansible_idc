@@ -1,0 +1,4 @@
+---
+container_registry: "local"
+dhcp_lease_time: 600
+dhcp_max_lease_time: 7200
