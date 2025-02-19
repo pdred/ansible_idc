@@ -1,0 +1,35 @@
+# .github/workflows/validate-docs.yml
+---
+name: Validate Documentation
+
+on:
+  push:
+    paths:
+      - '**.org'
+  pull_request:
+    paths:
+      - '**.org'
+
+jobs:
+  validate-org:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Emacs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y emacs
+
+      - name: Create minimal init file
+        run: |
+          echo "(require 'package)" > init.el
+          echo "(package-initialize)" >> init.el
+          echo "(unless (package-installed-p 'org)" >> init.el
+          echo "  (package-refresh-contents)" >> init.el
+          echo "  (package-install 'org))" >> init.el
+          echo "(require 'org)" >> init.el
+          echo "(require 'org-lint)" >> init.el
+
+      - name: Lint README.org
+        run: emacs --batch --no-init-file --load init.el --eval '(org-lint-file "README.org")'

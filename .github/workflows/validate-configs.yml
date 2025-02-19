@@ -1,0 +1,62 @@
+# .github/workflows/validate-configs.yml
+---
+name: Validate Configurations
+
+on:
+  push:
+    paths:
+      - 'roles/dns/templates/**'
+      - 'roles/dhcp/templates/**'
+  pull_request:
+    paths:
+      - 'roles/dns/templates/**'
+      - 'roles/dhcp/templates/**'
+
+jobs:
+  validate-dns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install BIND tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bind9utils bind9
+
+      - name: Validate zone templates
+        run: |
+          cd roles/dns/templates
+          for template in *.j2; do
+            if [[ $template == db.*.j2 ]]; then
+              echo "Checking zone file template: $template"
+              sudo named-checkzone lab.com <(envsubst < $template)
+            fi
+          done
+
+  validate-dhcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ISC DHCP server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y isc-dhcp-server
+
+      - name: Validate DHCP template
+        run: |
+          cd roles/dhcp/templates
+          sudo dhcpd -t -cf <(envsubst < dhcpd.conf.j2)
+
+  validate-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
+
+      - name: Run yamllint
+        run: yamllint .
