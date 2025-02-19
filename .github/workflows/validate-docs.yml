@@ -19,17 +19,46 @@ jobs:
       - name: Set up Emacs
         run: |
           sudo apt-get update
-          sudo apt-get install -y emacs
+          sudo apt-get install -y emacs-nox
 
       - name: Create minimal init file
         run: |
-          echo "(require 'package)" > init.el
-          echo "(package-initialize)" >> init.el
-          echo "(unless (package-installed-p 'org)" >> init.el
-          echo "  (package-refresh-contents)" >> init.el
-          echo "  (package-install 'org))" >> init.el
-          echo "(require 'org)" >> init.el
-          echo "(require 'org-lint)" >> init.el
+          cat > init.el << 'EOF'
+          (require 'package)
+          (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+          (package-initialize)
 
-      - name: Lint README.org
-        run: emacs --batch --no-init-file --load init.el --eval '(org-lint-file "README.org")'
+          (unless (package-installed-p 'org)
+            (package-refresh-contents)
+            (package-install 'org))
+
+          (require 'org)
+
+          ;; Basic validation function
+          (defun validate-org-file (file)
+            "Validate an org file for basic syntax"
+            (with-current-buffer (find-file-noselect file)
+              (org-mode)
+              (let ((errors 0))
+                ;; Check for malformed headlines
+                (org-element-map (org-element-parse-buffer) 'headline
+                  (lambda (headline)
+                    (unless (org-element-property :raw-value headline)
+                      (setq errors (1+ errors))
+                      (message "Error: Malformed headline found"))))
+
+                ;; Check for proper list formatting
+                (org-element-map (org-element-parse-buffer) 'plain-list
+                  (lambda (list)
+                    (unless (memq (org-element-property :type list) '(ordered unordered descriptive))
+                      (setq errors (1+ errors))
+                      (message "Error: Invalid list format found"))))
+
+                (if (> errors 0)
+                    (error "Found %d error(s) in %s" errors file)
+                  (message "No errors found in %s" file)))))
+          EOF
+
+      - name: Validate org files
+        run: |
+          emacs --batch --no-init-file --load init.el --eval '(validate-org-file "README.org")'

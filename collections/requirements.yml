@@ -1,0 +1,46 @@
+# collections/requirements.yml
+---
+collections:
+  - name: containers.podman
+    version: ">=1.10.1"
+  - name: ansible.posix
+    version: ">=1.5.1"
+  - name: community.general
+    version: ">=6.3.0"
+
+# ansible-lint.yml
+---
+name: Ansible Lint
+
+on:
+  push:
+    paths:
+      - '**.yml'
+      - '**.yaml'
+  pull_request:
+    paths:
+      - '**.yml'
+      - '**.yaml'
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint
+          ansible-galaxy collection install -r collections/requirements.yml
+
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@v6
+        with:
+          args: "--force-color"
+          lintable: "playbooks/ roles/ site.yml uninstall.yml"
