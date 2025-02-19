@@ -29,6 +29,7 @@
 
   post_tasks:
     - name: Verify services
+      tags: ['verify']
       block:
         - name: Test DNS resolution
           ansible.builtin.command: dig @{{ dns_server_ip }} infra.lab.com
@@ -56,4 +57,3 @@
             - nfs_test.rc != 0
             - "'Connection refused' not in nfs_test.stderr"
           when: "'nfs_servers' in group_names"
-      tags: ['verify']
