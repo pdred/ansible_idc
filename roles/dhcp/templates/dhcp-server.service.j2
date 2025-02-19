@@ -1,0 +1,19 @@
+[Unit]
+Description=DHCP Server Container
+After=network.target
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/podman rm -f dhcp-server
+ExecStart=/usr/bin/podman run --name dhcp-server \
+    --network host \
+    --privileged \
+    -v {{ ansible_user_home }}/lab-infra/dhcp/config/dhcpd.conf:/etc/dhcp/dhcpd.conf:Z \
+    -v {{ ansible_user_home }}/lab-infra/dhcp/data:/var/lib/dhcp:Z \
+    {{ container_registry }}/dhcp-server
+ExecStop=/usr/bin/podman stop dhcp-server
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=default.target
