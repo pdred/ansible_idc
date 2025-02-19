@@ -1,0 +1,14 @@
+---
+skip_list:
+  - no-handler
+  - command-instead-of-module
+
+enable_list:
+  - fqcn-builtins
+  - no-log-password
+
+warn_list:
+  - ignore-errors
+  - no-changed-when
+
+use_default_rules: true

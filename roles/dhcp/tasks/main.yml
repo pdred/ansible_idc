@@ -1,7 +1,7 @@
 # roles/dhcp/tasks/main.yml
 ---
 - name: Create DHCP directories
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
@@ -11,13 +11,13 @@
     - "~/lab-infra/dhcp/src"
 
 - name: Copy DHCP Dockerfile
-  template:
+  ansible.builtin.template:
     src: "Dockerfile"
     dest: "~/lab-infra/dhcp/src/Dockerfile"
     mode: '0644'
 
 - name: Generate DHCP configuration
-  template:
+  ansible.builtin.template:
     src: "dhcpd.conf.j2"
     dest: "~/lab-infra/dhcp/config/dhcpd.conf"
     mode: '0644'
@@ -26,25 +26,25 @@
   containers.podman.podman_image:
     name: "{{ container_registry }}/dhcp-server"
     path: "~/lab-infra/dhcp/src"
-    force: yes
+    force: true
 
 - name: Create DHCP systemd service
-  template:
+  ansible.builtin.template:
     src: "dhcp-server.service.j2"
     dest: "{{ systemd_user_dir }}/dhcp-server.service"
     mode: '0644'
 
 - name: Enable and start DHCP service
-  systemd:
+  ansible.builtin.systemd:
     name: dhcp-server
     state: started
-    enabled: yes
+    enabled: true
     scope: user
-    daemon_reload: yes
+    daemon_reload: true
 
 - name: Configure firewall for DHCP
-  firewalld:
+  ansible.posix.firewalld:
     service: dhcp
-    permanent: yes
+    permanent: true
     state: enabled
-  notify: reload firewall
+  notify: "Reload firewall"

@@ -8,3 +8,4 @@ collections:
   - name: community.general
     version: ">=6.3.0"
 
+roles: []

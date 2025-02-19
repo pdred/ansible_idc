@@ -1,18 +1,20 @@
----
 # roles/dns/handlers/main.yml
-
-- name: reload firewall
-  command: firewall-cmd --reload
+---
+- name: Reload firewall configuration
+  ansible.builtin.command: firewall-cmd --reload
   become: true
   changed_when: true
+  listen: "Reload firewall"
 
-- name: restart dns service
-  systemd:
+- name: Restart DNS service
+  ansible.builtin.systemd:
     name: dns-server
     state: restarted
     scope: user
+  listen: "Restart DNS"
 
-- name: reload systemd
-  systemd:
-    daemon_reload: yes
+- name: Reload systemd configuration
+  ansible.builtin.systemd:
+    daemon_reload: true
     scope: user
+  listen: "Reload systemd"
