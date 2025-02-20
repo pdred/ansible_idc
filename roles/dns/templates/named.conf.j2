@@ -1,0 +1,33 @@
+options {
+        listen-on port 53 { 127.0.0.1; {{ dns_server_ip }}; };
+        listen-on-v6 port 53 { none; };
+        directory       "/var/cache/bind";
+        dump-file       "/var/cache/bind/cache_dump.db";
+        statistics-file "/var/cache/bind/named_stats.txt";
+        memstatistics-file "/var/cache/bind/named_mem_stats.txt";
+        secroots-file   "/var/cache/bind/named.secroots";
+        recursing-file  "/var/cache/bind/named.recursing";
+        allow-query     { any; };
+        forwarders      { {% for forwarder in dns_forwarders %}{{ forwarder }}; {% endfor %} };
+        recursion yes;
+        dnssec-validation no;
+        managed-keys-directory "/var/cache/bind";
+        pid-file "/run/named/named.pid";
+        session-keyfile "/run/named/session.key";
+};
+
+zone "lab.com" IN {
+    type master;
+    file "/etc/bind/db.lab.com";
+};
+
+zone "10.168.192.in-addr.arpa" IN {
+    type master;
+    file "/etc/bind/db.10.168.192";
+};
+
+# Root hints zone
+zone "." IN {
+        type hint;
+        file "named.ca";
+};

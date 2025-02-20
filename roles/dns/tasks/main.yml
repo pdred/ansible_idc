@@ -9,30 +9,7 @@
     - "~/lab-infra/dns/config"
     - "~/lab-infra/dns/data"
     - "~/lab-infra/dns/src"
-
-- name: Create DNS validation directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: '0755'
-  become: true
-  loop:
-    - "/etc/bind"
-    - "/var/lib/bind"
-    - "/var/named/data"
-    - "/var/named/dynamic"
-
-- name: Set DNS directory permissions
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_id }}"
-    mode: '0755'
-  become: true
-  loop:
-    - "/etc/bind"
-    - "/var/lib/bind"
+    - "~/lab-infra/dns/logs"
 
 - name: Copy DNS Dockerfile
   ansible.builtin.template:
@@ -48,22 +25,32 @@
   loop:
     - { src: 'named.conf.j2', dest: 'named.conf' }
     - { src: 'db.lab.com.j2', dest: 'db.lab.com' }
-    - { src: 'db.reverse.j2', dest: 'db.10.168.192' }
+    - { src: 'db.10.168.192.j2', dest: 'db.10.168.192' }
 
-- name: Validate DNS configuration
-  ansible.builtin.command: "named-checkconf ~/lab-infra/dns/config/named.conf"
-  changed_when: false
-  register: named_conf_check
+- name: Configure logging in named.conf
+  ansible.builtin.blockinfile:
+    path: "~/lab-infra/dns/config/named.conf"
+    marker: "// {mark} ANSIBLE MANAGED BLOCK - LOGGING"
+    block: |
+      logging {
+          channel default_debug {
+              file "/var/cache/bind/named.log" versions 3 size 5m;
+              severity dynamic;
+              print-time yes;
+          };
+      };
+  when: dns_enable_logging | default(true)
 
-- name: Validate forward zone
-  ansible.builtin.command: "named-checkzone {{ base_domain }} ~/lab-infra/dns/config/db.lab.com"
-  changed_when: false
-  register: forward_zone_check
-
-- name: Validate reverse zone
-  ansible.builtin.command: "named-checkzone 10.168.192.in-addr.arpa ~/lab-infra/dns/config/db.10.168.192"
-  changed_when: false
-  register: reverse_zone_check
+- name: Set SELinux context for DNS directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    setype: container_file_t
+    recurse: yes
+  loop:
+    - "~/lab-infra/dns/config"
+    - "~/lab-infra/dns/data"
+  when: ansible_selinux.status == "enabled"
+  become: true
 
 - name: Build DNS container
   containers.podman.podman_image:
@@ -71,6 +58,19 @@
     path: "~/lab-infra/dns/src"
     force: true
   register: dns_image_build
+
+- name: Validate DNS configuration
+  block:
+    - name: Check named configuration
+      ansible.builtin.command: "podman run --rm -v ~/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkconf /etc/bind/named.conf"
+      changed_when: false
+
+    - name: Check zone files
+      ansible.builtin.command: "podman run --rm -v ~/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkzone {{ item.zone }} /etc/bind/{{ item.file }}"
+      loop:
+        - { zone: "lab.com", file: "db.lab.com" }
+        - { zone: "10.168.192.in-addr.arpa", file: "db.10.168.192" }
+      changed_when: false
 
 - name: Stop existing DNS container
   containers.podman.podman_container:
@@ -81,6 +81,20 @@
     - container_stop.failed is defined
     - container_stop.failed
     - '"not found" not in container_stop.msg'
+
+- name: Create DNS container
+  containers.podman.podman_container:
+    name: dns-server
+    image: "{{ container_registry }}/dns-server"
+    state: started
+    volumes:
+      - "~/lab-infra/dns/config:/etc/bind:Z"
+      - "~/lab-infra/dns/data:/var/cache/bind:Z"
+    ports:
+      - "{{ dns_server_ip }}:53:53/tcp"
+      - "{{ dns_server_ip }}:53:53/udp"
+    restart_policy: always
+  register: dns_container
 
 - name: Create DNS systemd service directory
   ansible.builtin.file:

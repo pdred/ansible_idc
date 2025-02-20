@@ -1,0 +1,20 @@
+[Unit]
+Description=DNS Server Container
+After=network.target
+
+[Service]
+Type=simple
+TimeoutStartSec=30
+ExecStartPre=-/usr/bin/podman rm -f dns-server
+ExecStart=/usr/bin/podman run --name dns-server \
+    -v ~/lab-infra/dns/config:/etc/bind:Z \
+    -v ~/lab-infra/dns/data:/var/cache/bind:Z \
+    -p {{ dns_server_ip }}:53:53/tcp \
+    -p {{ dns_server_ip }}:53:53/udp \
+    {{ container_registry }}/dns-server
+ExecStop=/usr/bin/podman stop -t 10 dns-server
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target
