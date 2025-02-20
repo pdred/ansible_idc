@@ -42,7 +42,7 @@
 
 - name: Build DHCP container
   containers.podman.podman_image:
-    name: "{{ container_registry }}/dhcp-server"
+    name: "{{ dhcp_container_registry }}/dhcp-server"
     path: "~/lab-infra/dhcp/src"
     force: "{{ dockerfile_copy.changed }}"
   register: container_build
