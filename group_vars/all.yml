@@ -78,6 +78,7 @@ common_packages:
     - dhcp-server
     - nfs-utils
     - firewalld
+    - podman
   Debian:
     - bind9
     - bind9utils
