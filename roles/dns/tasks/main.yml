@@ -6,21 +6,21 @@
     state: directory
     mode: '0755'
   loop:
-    - "~/lab-infra/dns/config"
-    - "~/lab-infra/dns/data"
-    - "~/lab-infra/dns/src"
-    - "~/lab-infra/dns/logs"
+    - "{{ ansible_user_home  }}/lab-infra/dns/config"
+    - "{{ ansible_user_home  }}/lab-infra/dns/data"
+    - "{{ ansible_user_home  }}/lab-infra/dns/src"
+    - "{{ ansible_user_home  }}/lab-infra/dns/logs"
 
 - name: Copy DNS Dockerfile
   ansible.builtin.template:
     src: "Dockerfile.j2"
-    dest: "~/lab-infra/dns/src/Dockerfile"
+    dest: "{{ ansible_user_home  }}/lab-infra/dns/src/Dockerfile"
     mode: '0644'
 
 - name: Generate DNS configuration
   ansible.builtin.template:
     src: "{{ item.src }}"
-    dest: "~/lab-infra/dns/config/{{ item.dest }}"
+    dest: "{{ ansible_user_home  }}/lab-infra/dns/config/{{ item.dest }}"
     mode: '0644'
   loop:
     - { src: 'named.conf.j2', dest: 'named.conf' }
@@ -29,7 +29,7 @@
 
 - name: Configure logging in named.conf
   ansible.builtin.blockinfile:
-    path: "~/lab-infra/dns/config/named.conf"
+    path: "{{ ansible_user_home  }}/lab-infra/dns/config/named.conf"
     marker: "// {mark} ANSIBLE MANAGED BLOCK - LOGGING"
     block: |
       logging {
@@ -47,26 +47,26 @@
     setype: container_file_t
     recurse: yes
   loop:
-    - "~/lab-infra/dns/config"
-    - "~/lab-infra/dns/data"
+    - "{{ ansible_user_home  }}/lab-infra/dns/config"
+    - "{{ ansible_user_home  }}/lab-infra/dns/data"
   when: ansible_selinux.status == "enabled"
   become: true
 
 - name: Build DNS container
   containers.podman.podman_image:
     name: "{{ container_registry }}/dns-server"
-    path: "~/lab-infra/dns/src"
+    path: "{{ ansible_user_home  }}/lab-infra/dns/src"
     force: true
   register: dns_image_build
 
 - name: Validate DNS configuration
   block:
     - name: Check named configuration
-      ansible.builtin.command: "podman run --rm -v ~/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkconf /etc/bind/named.conf"
+      ansible.builtin.command: "podman run --rm -v {{ ansible_user_home  }}/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkconf /etc/bind/named.conf"
       changed_when: false
 
     - name: Check zone files
-      ansible.builtin.command: "podman run --rm -v ~/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkzone {{ item.zone }} /etc/bind/{{ item.file }}"
+      ansible.builtin.command: "podman run --rm -v {{ ansible_user_home  }}/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkzone {{ item.zone }} /etc/bind/{{ item.file }}"
       loop:
         - { zone: "lab.com", file: "db.lab.com" }
         - { zone: "10.168.192.in-addr.arpa", file: "db.10.168.192" }
