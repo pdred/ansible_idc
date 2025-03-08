@@ -85,7 +85,7 @@ The infrastructure deployment consists of three main services:
 
 *** Clone the Repository
 #+begin_src bash
-git clone https://github.com/pebcac/lab-infra.git
+git clone https://github.com/pdred/ansible_idc.git
 cd lab-infra
 #+end_src
 
