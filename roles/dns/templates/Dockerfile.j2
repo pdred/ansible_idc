@@ -1,19 +1,19 @@
 # roles/dns/templates/Dockerfile.j2
-FROM docker.io/ubuntu:22.04
+- name: Pull prebuilt DNS server image
+  containers.podman.podman_image:
+    name: "docker.io/internetsystemsconsortium/bind9:9.16"
+    force: true
+  register: dns_image_pull
 
-RUN apt-get update && \
-    apt-get install -y bind9 bind9utils bind9-doc dnsutils && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Get root hints file
-RUN curl -o /etc/bind/named.ca https://www.internic.net/domain/named.root
-
-# Create required directories
-RUN mkdir -p /var/run/named && \
-    mkdir -p /var/cache/bind && \
-    chown -R bind:bind /var/run/named /var/cache/bind
-
-EXPOSE 53/tcp 53/udp
-
-CMD ["/usr/sbin/named", "-g", "-c", "/etc/bind/named.conf", "-u", "bind"]
+- name: Create DNS container from prebuilt image
+  containers.podman.podman_container:
+    name: dns-server
+    image: docker.io/internetsystemsconsortium/bind9:9.16
+    state: started
+    restart_policy: always
+    volumes:
+      - "~/lab-infra/dns/config:/etc/bind:Z"
+      - "~/lab-infra/dns/data:/var/lib/bind:Z"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
