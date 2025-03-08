@@ -52,12 +52,24 @@
   when: ansible_selinux.status == "enabled"
   become: true
 
-- name: Build DNS container
+- name: Pull prebuilt DNS server image
   containers.podman.podman_image:
-    name: "{{ container_registry }}/dns-server"
-    path: "~/lab-infra/dns/src"
+    name: "docker.io/internetsystemsconsortium/bind9:9.16"
     force: true
-  register: dns_image_build
+  register: dns_image_pull
+
+- name: Create DNS container from prebuilt image
+  containers.podman.podman_container:
+    name: dns-server
+    image: docker.io/internetsystemsconsortium/bind9:9.16
+    state: started
+    restart_policy: always
+    volumes:
+      - "~/lab-infra/dns/config:/etc/bind:Z"
+      - "~/lab-infra/dns/data:/var/lib/bind:Z"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
 
 - name: Validate DNS configuration
   block:
