@@ -11,6 +11,17 @@
       changed_when: false
       when: ansible_pkg_mgr in ['dnf', 'yum']
 
+    - name: Stop and disable original binary services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop:
+        - named
+        - dhcpd
+        - nfs-server
+      failed_when: false
+
   roles:
     - role: common
       tags: ['common']
@@ -57,3 +68,10 @@
             - nfs_test.rc != 0
             - "'Connection refused' not in nfs_test.stderr"
           when: "'nfs_servers' in group_names"
+
+        - name: Enable podman socket for systemd
+          ansible.builtin.systemd:
+            name: podman.socket
+            enabled: true
+            state: started
+          become: true
