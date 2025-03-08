@@ -87,14 +87,14 @@
     name: dns-server
     image: "{{ container_registry }}/dns-server"
     state: started
-    volumes:
-      - "~/lab-infra/dns/config:/etc/bind:Z"
-      - "~/lab-infra/dns/data:/var/cache/bind:Z"
-    ports:
-      - "{{ dns_server_ip }}:53:53/tcp"
-      - "{{ dns_server_ip }}:53:53/udp"
     restart_policy: always
-  register: dns_container
+    volumes:
+      - "{{ ansible_user_home }}/lab-infra/dns/config:/etc/bind:Z"
+      - "{{ ansible_user_home }}/lab-infra/dns/data:/var/lib/bind:Z"
+      - "{{ ansible_user_home }}/lab-infra/dns/logs:/var/log/named:Z"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
 
 - name: Create DNS systemd service directory
   ansible.builtin.file:
