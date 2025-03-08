@@ -49,8 +49,8 @@ clusters:
 # Container Configuration
 container_engine: "podman"
 container_registry: "local"
-systemd_user_dir: "{{ ansible_user_home }}/.config/systemd/user"
-ansible_user_home: "{{ ansible_user_home }}"
+systemd_user_dir: "~/.config/systemd/user"
+ansible_user_home: "~"
 
 # DNS Configuration
 dns_forwarders:
@@ -63,11 +63,11 @@ dhcp_max_lease_time: 7200
 
 # NFS Configuration
 nfs_exports:
-  - path: "{{ ansible_user_home }}/nfsshare/engg"
+  - path: "~/nfsshare/engg"
     options: "*(rw,sync,no_root_squash)"
-  - path: "{{ ansible_user_home }}/nfsshare/partner"
+  - path: "~/nfsshare/partner"
     options: "*(rw,sync,no_root_squash)"
-  - path: "{{ ansible_user_home }}/nfsshare/kvm"
+  - path: "~/nfsshare/kvm"
     options: "*(rw,sync,no_root_squash)"
 
 # Required packages
