@@ -82,18 +82,31 @@
   register: dhcp_service_file
   become: false
 
-- name: Reload systemd daemon
-  ansible.builtin.command: machinectl shell --uid={{ ansible_user_id }} . systemctl --user daemon-reload
-  changed_when: true
+- name: Create DHCP container startup script
+  ansible.builtin.template:
+    src: start-dhcp.sh.j2
+    dest: "~/lab-infra/dhcp/start-dhcp.sh"
+    mode: '0755'
+  become: false
+
+- name: Create DHCP systemd service (system level)
+  ansible.builtin.template:
+    src: dhcp-server-system.service.j2
+    dest: "/etc/systemd/system/dhcp-server.service"
+    mode: '0644'
   become: true
 
-- name: Enable and start DHCP service
-  ansible.builtin.shell: |
-    export XDG_RUNTIME_DIR=/run/user/$(id -u)
-    systemctl --user enable --now dhcp-server.service
-  register: dhcp_service_result
-  changed_when: true
-  become: false
+- name: Reload systemd daemon (system)
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Enable and start DHCP service (system)
+  ansible.builtin.systemd:
+    name: dhcp-server
+    state: started
+    enabled: true
+  become: true
 
 - name: Configure firewall for DHCP
   ansible.posix.firewalld:

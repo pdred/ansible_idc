@@ -1,0 +1,10 @@
+#!/bin/bash
+# Start DNS container
+mkdir -p ~/podman-tmp
+podman --root ~/podman-storage --runroot ~/podman-tmp rm -f dns-server || true
+podman --root ~/podman-storage --runroot ~/podman-tmp run -d --name dns-server \
+  -v {{ ansible_user_home }}/lab-infra/dns/config:/etc/bind:Z \
+  -v {{ ansible_user_home }}/lab-infra/dns/data:/var/lib/bind:Z \
+  -v {{ ansible_user_home }}/lab-infra/dns/logs:/var/log/named:Z \
+  --network=host \
+  {{ container_registry }}/dns-server

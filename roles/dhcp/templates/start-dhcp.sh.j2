@@ -1,0 +1,9 @@
+#!/bin/bash
+# Start DHCP container
+mkdir -p ~/podman-tmp
+podman --root ~/podman-storage --runroot ~/podman-tmp rm -f dhcp-server || true
+podman --root ~/podman-storage --runroot ~/podman-tmp run -d --name dhcp-server \
+  -v {{ ansible_user_home }}/lab-infra/dhcp/config:/etc/dhcp:Z \
+  -v {{ ansible_user_home }}/lab-infra/dhcp/data:/var/lib/dhcp:Z \
+  --network=host \
+  {{ container_registry }}/dhcp-server

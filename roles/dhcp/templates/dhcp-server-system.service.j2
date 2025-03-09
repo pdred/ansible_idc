@@ -1,0 +1,13 @@
+[Unit]
+Description=DHCP Server Container
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{ ansible_user_id }}
+ExecStart={{ ansible_user_home }}/lab-infra/dhcp/start-dhcp.sh
+ExecStop={{ ansible_user_home }}/.local/bin/podman rm -f dhcp-server
+
+[Install]
+WantedBy=multi-user.target

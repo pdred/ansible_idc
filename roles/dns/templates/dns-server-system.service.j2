@@ -1,0 +1,13 @@
+[Unit]
+Description=DNS Server Container
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{ ansible_user_id }}
+ExecStart={{ ansible_user_home }}/lab-infra/dns/start-dns.sh
+ExecStop={{ ansible_user_home }}/.local/bin/podman rm -f dns-server
+
+[Install]
+WantedBy=multi-user.target
