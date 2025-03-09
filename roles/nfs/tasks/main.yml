@@ -1,5 +1,7 @@
 # roles/nfs/tasks/main.yml
 ---
+# roles/nfs/tasks/main.yml
+---
 - name: Create NFS export directories
   ansible.builtin.file:
     path: "{{ item.path }}"
@@ -8,14 +10,15 @@
     owner: "nobody"
     group: "nobody"
   loop: "{{ nfs_exports }}"
+  become: true
 
 - name: Configure NFS exports
   ansible.builtin.template:
     src: "exports.j2"
     dest: "/etc/exports"
     mode: '0644'
-  notify: "Restart NFS service"
   become: true
+  notify: "Restart NFS service"
 
 - name: Enable and start NFS server
   ansible.builtin.systemd:
@@ -33,5 +36,5 @@
     - nfs
     - rpc-bind
     - mountd
-  notify: "Reload firewall"
   become: true
+  notify: "Reload firewall"
