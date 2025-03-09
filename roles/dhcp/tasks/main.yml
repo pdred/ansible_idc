@@ -83,18 +83,18 @@
   become: false
 
 - name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: true
-    scope: user
-  when: dhcp_service_file.changed
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    systemctl --user daemon-reload
+  changed_when: true
   become: false
 
 - name: Enable and start DHCP service
-  ansible.builtin.systemd:
-    name: dhcp-server
-    state: started
-    enabled: true
-    scope: user
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    systemctl --user enable --now dhcp-server.service
+  register: dhcp_service_result
+  changed_when: true
   become: false
 
 - name: Configure firewall for DHCP

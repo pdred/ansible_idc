@@ -114,18 +114,18 @@
   become: false
 
 - name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: true
-    scope: user
-  when: dns_service_file.changed
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    systemctl --user daemon-reload
+  changed_when: true
   become: false
 
 - name: Enable and start DNS service
-  ansible.builtin.systemd:
-    name: dns-server
-    state: started
-    enabled: true
-    scope: user
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    systemctl --user enable --now dns-server.service
+  register: dns_service_result
+  changed_when: true
   become: false
 
 - name: Configure firewall for DNS
