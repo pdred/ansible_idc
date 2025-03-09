@@ -68,7 +68,7 @@
     podman --root ~/podman-storage --runroot ~/podman-tmp run -d --name dhcp-server \
       -v {{ ansible_user_home }}/lab-infra/dhcp/config:/etc/dhcp:Z \
       -v {{ ansible_user_home }}/lab-infra/dhcp/data:/var/lib/dhcp:Z \
-      --net=host \
+      --network=host \
       {{ container_registry }}/dhcp-server
   register: container_create
   changed_when: true

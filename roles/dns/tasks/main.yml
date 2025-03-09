@@ -92,7 +92,7 @@
       -v {{ ansible_user_home }}/lab-infra/dns/config:/etc/bind:Z \
       -v {{ ansible_user_home }}/lab-infra/dns/data:/var/lib/bind:Z \
       -v {{ ansible_user_home }}/lab-infra/dns/logs:/var/log/named:Z \
-      -p 53:53/tcp -p 53:53/udp \
+      --network=host \
       {{ container_registry }}/dns-server
   register: container_create
   changed_when: true
