@@ -24,6 +24,18 @@
       failed_when: false
       become: true  # Add this line
 
+  roles:
+    - role: common
+      tags: ['common']
+
+    - role: dns
+      tags: ['dns']
+      when: "'dns_servers' in group_names"
+
+    - role: dhcp
+      tags: ['dhcp']
+      when: "'dhcp_servers' in group_names"
+
     - role: nfs
       tags: ['nfs']
       when: "'nfs_servers' in group_names"
