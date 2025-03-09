@@ -1,8 +1,31 @@
 #!/bin/bash
 # Start DHCP container
-mkdir -p ~/podman-tmp
-podman --root ~/podman-storage --runroot ~/podman-tmp rm -f dhcp-server || true
-podman --root ~/podman-storage --runroot ~/podman-tmp run -d --name dhcp-server \
+
+# Create runtime directories
+mkdir -p {{ ansible_user_home }}/podman-storage
+mkdir -p {{ ansible_user_home }}/podman-tmp
+
+# Set explicit runtime environment
+export XDG_RUNTIME_DIR={{ ansible_user_home }}/podman-tmp
+export CONTAINERS_STORAGE_CONF={{ ansible_user_home }}/.config/containers/storage.conf
+
+# Configure storage if not already done
+if [ ! -f "${CONTAINERS_STORAGE_CONF}" ]; then
+  mkdir -p $(dirname ${CONTAINERS_STORAGE_CONF})
+  cat > ${CONTAINERS_STORAGE_CONF} << EOF
+[storage]
+driver = "vfs"
+runroot = "${XDG_RUNTIME_DIR}"
+graphroot = "{{ ansible_user_home }}/podman-storage"
+EOF
+fi
+
+# Remove existing container
+/usr/bin/podman rm -f dhcp-server >/dev/null 2>&1 || true
+
+# Start container with explicit storage configuration
+/usr/bin/podman --root {{ ansible_user_home }}/podman-storage --runroot ${XDG_RUNTIME_DIR} \
+  run -d --name dhcp-server \
   -v {{ ansible_user_home }}/lab-infra/dhcp/config:/etc/dhcp:Z \
   -v {{ ansible_user_home }}/lab-infra/dhcp/data:/var/lib/dhcp:Z \
   --network=host \

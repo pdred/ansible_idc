@@ -45,6 +45,13 @@
     - "~/podman-tmp"
   become: false
 
+- name: Configure podman to use vfs storage driver
+  ansible.builtin.template:
+    src: storage.conf.j2
+    dest: "{{ ansible_user_home }}/.config/containers/storage.conf"
+    mode: '0644'
+  become: false
+
 - name: Build DHCP container
   ansible.builtin.shell: |
     mkdir -p ~/podman-tmp
