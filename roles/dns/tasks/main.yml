@@ -40,6 +40,7 @@
           };
       };
   when: dns_enable_logging | default(true)
+  become: true
 
 - name: Set SELinux context for DNS directories
   ansible.builtin.file:

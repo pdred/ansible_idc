@@ -97,6 +97,7 @@
     permanent: true
     state: enabled
   notify: "Reload firewall"
+  become: true
 
 - name: Verify DHCP service is responding
   ansible.builtin.wait_for:

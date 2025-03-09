@@ -15,12 +15,14 @@
     dest: "/etc/exports"
     mode: '0644'
   notify: "Restart NFS service"
+  become: true
 
 - name: Enable and start NFS server
   ansible.builtin.systemd:
     name: nfs-server
     state: started
     enabled: true
+  become: true
 
 - name: Configure firewall for NFS
   ansible.posix.firewalld:
@@ -32,3 +34,4 @@
     - rpc-bind
     - mountd
   notify: "Reload firewall"
+  become: true

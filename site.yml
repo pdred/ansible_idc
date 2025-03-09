@@ -2,12 +2,13 @@
 ---
 - name: Deploy Lab Infrastructure
   hosts: all
-  become: true
+  become: false  # Change this from true to false
 
   pre_tasks:
     - name: Update package cache
       ansible.builtin.package:
         update_cache: true
+      become: true  # Add this line to use privilege escalation only for this task
       changed_when: false
       when: ansible_pkg_mgr in ['dnf', 'yum']
 
@@ -21,18 +22,7 @@
         - dhcpd
         - nfs-server
       failed_when: false
-
-  roles:
-    - role: common
-      tags: ['common']
-
-    - role: dns
-      tags: ['dns']
-      when: "'dns_servers' in group_names"
-
-    - role: dhcp
-      tags: ['dhcp']
-      when: "'dhcp_servers' in group_names"
+      become: true  # Add this line
 
     - role: nfs
       tags: ['nfs']

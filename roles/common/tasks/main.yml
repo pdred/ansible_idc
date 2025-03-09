@@ -5,6 +5,7 @@
   ansible.builtin.package:
     name: "{{ common_packages[ansible_os_family] }}"
     state: present
+  become: true
 
 - name: Create systemd user directories
   ansible.builtin.file:
@@ -29,6 +30,7 @@
     name: firewalld
     state: started
     enabled: true
+  become: true
 
 - name: Create base lab-infra directory structure
   ansible.builtin.file:
