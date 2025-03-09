@@ -54,11 +54,12 @@
   become: true
 
 - name: Build DNS container
-  containers.podman.podman_image:
-    name: "{{ container_registry }}/dns-server"
-    path: "{{ ansible_user_home  }}/lab-infra/dns/src"
-    force: true
-  register: dns_image_build
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR="/run/user/{{ ansible_user_uid }}"
+    podman build -t {{ container_registry }}/dns-server ~/lab-infra/dns/src/
+  register: build_result
+  changed_when: "'Writing manifest' in build_result.stdout"
+  become: false
 
 - name: Validate DNS configuration
   block:
@@ -96,6 +97,7 @@
     ports:
       - "53:53/tcp"
       - "53:53/udp"
+  become: false
 
 - name: Create DNS systemd service directory
   ansible.builtin.file:

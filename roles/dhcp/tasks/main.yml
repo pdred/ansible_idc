@@ -41,14 +41,12 @@
   register: dockerfile_copy
 
 - name: Build DHCP container
-  containers.podman.podman_image:
-    name: "{{ dhcp_container_registry }}/dhcp-server"
-    path: "~/lab-infra/dhcp/src"
-    force: "{{ dockerfile_copy.changed }}"
-  register: container_build
-  failed_when:
-    - container_build.failed is defined
-    - container_build.failed
+  ansible.builtin.shell: |
+    export XDG_RUNTIME_DIR="/run/user/{{ ansible_user_uid }}"
+    podman build -t {{ container_registry }}/dhcp-server ~/lab-infra/dhcp/src/
+  register: build_result
+  changed_when: "'Writing manifest' in build_result.stdout"
+  become: false
 
 # New task to ensure any existing container is removed before creating new one
 - name: Remove existing DHCP container if exists
@@ -64,11 +62,13 @@
     image: "{{ container_registry }}/dhcp-server"
     state: present
     volumes:
-      - "~/lab-infra/dhcp/config/dhcpd.conf:/etc/dhcp/dhcpd.conf:Z"
-      - "~/lab-infra/dhcp/data:/var/lib/dhcp:Z"
+      - "/home/{{ ansible_user }}/lab-infra/dns/config:/etc/bind:Z"
+      - "/home/{{ ansible_user }}/lab-infra/dns/data:/var/lib/bind:Z"
+      - "/home/{{ ansible_user }}/lab-infra/dns/logs:/var/log/named:Z"
     network: host
     privileged: true  # Required for DHCP server functionality
   register: container_create
+  become: false
 
 - name: Generate systemd service file
   ansible.builtin.template:
