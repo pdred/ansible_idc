@@ -1,7 +1,5 @@
 # roles/dns/tasks/main.yml
 ---
-# roles/dns/tasks/main.yml
----
 - name: Create DNS directories
   ansible.builtin.file:
     path: "{{ item }}"

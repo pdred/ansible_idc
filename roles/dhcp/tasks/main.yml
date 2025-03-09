@@ -1,7 +1,5 @@
 # roles/dhcp/tasks/main.yml
 ---
-# roles/dhcp/tasks/main.yml
----
 - name: Verify required variables
   ansible.builtin.assert:
     that:

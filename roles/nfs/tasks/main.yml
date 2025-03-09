@@ -1,7 +1,5 @@
 # roles/nfs/tasks/main.yml
 ---
-# roles/nfs/tasks/main.yml
----
 - name: Create NFS export directories
   ansible.builtin.file:
     path: "{{ item.path }}"
