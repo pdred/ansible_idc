@@ -161,3 +161,15 @@
   changed_when: false
   failed_when: dns_test.rc != 0
   become: false
+
+- name: Verify systemd service file syntax
+  ansible.builtin.command: systemd-analyze verify /etc/systemd/system/dns-server.service
+  register: systemd_verify
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Debug systemd verification
+  ansible.builtin.debug:
+    var: systemd_verify
+  become: false

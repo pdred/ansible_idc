@@ -3,13 +3,10 @@ Description=DHCP Server Container
 After=network.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 User={{ ansible_user_id }}
-Group={{ ansible_user_id }}
-WorkingDirectory={{ ansible_user_home }}
-ExecStart={{ ansible_user_home }}/lab-infra/dhcp/start-dhcp.sh
-ExecStop=/usr/bin/podman --root {{ ansible_user_home }}/podman-storage --runroot {{ ansible_user_home }}/podman-tmp rm -f dhcp-server
+ExecStart=/bin/bash {{ ansible_user_home }}/lab-infra/dhcp/start-dhcp.sh
+ExecStop=/bin/bash -c "/usr/bin/podman stop dhcp-server || true"
 
 [Install]
 WantedBy=multi-user.target
