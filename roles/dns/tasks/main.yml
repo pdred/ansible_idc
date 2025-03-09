@@ -78,8 +78,13 @@
 - name: Validate DNS configuration
   block:
     - name: Check named configuration
-      ansible.builtin.command: "podman run --rm -v {{ ansible_user_home  }}/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkconf /etc/bind/named.conf"
+      ansible.builtin.shell: |
+        mkdir -p ~/podman-tmp
+        podman --root ~/podman-storage --runroot ~/podman-tmp run --rm -v ~/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkconf /etc/bind/named.conf
+      register: named_conf_check
       changed_when: false
+      failed_when: named_conf_check.rc != 0
+      become: false
 
     - name: Check zone files
       ansible.builtin.command: "podman run --rm -v {{ ansible_user_home  }}/lab-infra/dns/config:/etc/bind:Z {{ container_registry }}/dns-server named-checkzone {{ item.zone }} /etc/bind/{{ item.file }}"
