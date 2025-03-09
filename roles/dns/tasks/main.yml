@@ -53,10 +53,24 @@
   when: ansible_selinux.status == "enabled"
   become: true
 
+- name: Enable lingering for user
+  ansible.builtin.command: loginctl enable-linger {{ ansible_user_uid }}
+  become: true
+  changed_when: false
+
+- name: Configure podman with cgroupfs manager
+  ansible.builtin.copy:
+    dest: ~/.config/containers/containers.conf
+    content: |
+      [engine]
+      cgroup_manager = "cgroupfs"
+    mode: '0644'
+  become: false
+
 - name: Build DNS container
   ansible.builtin.shell: |
     mkdir -p ~/podman-tmp
-    podman --root ~/podman-storage --runroot ~/podman-tmp build -t {{ container_registry }}/dns-server ~/lab-infra/dns/src/
+    podman --root ~/podman-storage --runroot ~/podman-tmp --cgroup-manager=cgroupfs build -t {{ container_registry }}/dns-server ~/lab-infra/dns/src/
   register: build_result
   changed_when: true
   become: false
